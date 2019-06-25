@@ -54,10 +54,26 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
 
     // Build HTTP response and store it in response
+    /*
+        HTTP/1.1 200 OK
+        Date: Wed Dec 20 13:05:11 PST 2017
+        Connection: close
+        Content-Length: 41749
+        Content-Type: text/html
 
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+        <!DOCTYPE html><html><head><title>Lambda School ...
+    */
+
+    int response_length = strlen(body);
+
+    sprintf(response,
+        "%s\n"
+        "Content-Type: %s"
+        "Content-Length: %d\n"
+        "Connection: close\n"
+        "\n"
+        "%s",
+        header, content_type, response_length, body);
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
@@ -158,13 +174,22 @@ void handle_http_request(int fd, struct cache *cache)
     // IMPLEMENT ME! //
     ///////////////////
 
-    // Read the first two components of the first line of the request 
+    // Read the first two components of the first line of the request
+    sscanf(request, "%s %s", method, path);
  
     // If GET, handle the get endpoints
-
-    //    Check if it's /d20 and handle that special case
-    //    Otherwise serve the requested file by calling get_file()
-
+    // 0 means they are the same
+    if (strcmp(method, "GET") == 0) {
+        //    Check if it's /d20 and handle that special case
+        if (strcmp(path, "/d20" == 0)) {
+            // Do something here ??
+        } else {
+            //    Otherwise serve the requested file by calling get_file()
+            get_d20();
+        }
+    } else {
+        resp_404()
+    }
 
     // (Stretch) If POST, handle the post request
 }
