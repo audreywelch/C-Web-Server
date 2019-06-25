@@ -64,19 +64,34 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
         <!DOCTYPE html><html><head><title>Lambda School ...
     */
 
-    int response_length = strlen(body);
-
-    sprintf(response,
+    // Store it in response, and pass in the following
+    int response_length = sprintf(response,
         "%s\n"
         "Content-Type: %s"
         "Content-Length: %d\n"
+        //"Date: %s\n" // TODO add this
         "Connection: close\n"
-        "\n"
-        "%s",
-        header, content_type, response_length, body);
+        "\n",
+        header, content_type, content_length);
+        //"%s", // passing binary data is not working b/c it is full of 0s. And zeros are what indicate we are at the end of a string, so it's stopping before it reads the whole piece of data: a PNG in this case
 
-    // Send it all!
+    // Length of response, including the HTTP header
+    //int response_length = strlen(response); >> set this above
+
+    // memcpy(); // memcpy the data onto the end, rather than passing "%s"
+    // Or send the header over and THEN send the body over
+
+    // Send it all! // take our HTTP data that we built and telling OS to send it out over the connection
+
+    // Send header
     int rv = send(fd, response, response_length, 0);
+
+    if (rv < 0) {
+        perror("send");
+    }
+
+    // Send body
+    rv = send(fd, body, content_length, 0);
 
     if (rv < 0) {
         perror("send");
@@ -91,17 +106,22 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
  */
 void get_d20(int fd)
 {
+    (void)fd;
     // Generate a random number between 1 and 20 inclusive
     
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    // int num;
+    // int i;
+    // for (i = 0; i <= 1; i++)
+    // {
+    //     num = rand() % 21 + 1;
+    //     printf("%d\n", num);
+    // }
+
+    char random_num[8];
+    sprintf(random_num, "%d\n", (rand() % 20) + 1);
 
     // Use send_response() to send it back as text/plain data
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", random_num, strlen(random_num));
 }
 
 /**
@@ -133,8 +153,15 @@ void resp_404(int fd)
 /**
  * Read and return a file from disk or cache
  */
+// file __
+// tells us what something is
+// file serverroot/cat.jpg
+// tells us that it is actually a PNG image data, 
 void get_file(int fd, struct cache *cache, char *request_path)
 {
+    (void)fd;
+    (void)cache;
+    (void)request_path;
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -148,9 +175,11 @@ void get_file(int fd, struct cache *cache, char *request_path)
  */
 char *find_start_of_body(char *header)
 {
+    (void)header;
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
+    return NULL;
 }
 
 /**
@@ -160,6 +189,8 @@ void handle_http_request(int fd, struct cache *cache)
 {
     const int request_buffer_size = 65536; // 64K
     char request[request_buffer_size];
+    char method[128]; // get buffer
+    char path[8192]; // get buffer
 
     // Read request
     int bytes_recvd = recv(fd, request, request_buffer_size - 1, 0);
@@ -169,6 +200,9 @@ void handle_http_request(int fd, struct cache *cache)
         return;
     }
 
+    printf("---------------\n");
+    printf("%s\n", request);
+    printf("---------------\n");
 
     ///////////////////
     // IMPLEMENT ME! //
@@ -176,19 +210,19 @@ void handle_http_request(int fd, struct cache *cache)
 
     // Read the first two components of the first line of the request
     sscanf(request, "%s %s", method, path);
- 
+
     // If GET, handle the get endpoints
-    // 0 means they are the same
     if (strcmp(method, "GET") == 0) {
         //    Check if it's /d20 and handle that special case
         if (strcmp(path, "/d20" == 0)) {
             // Do something here ??
+            get_d20(fd);
         } else {
-            //    Otherwise serve the requested file by calling get_file()
-            get_d20();
+            // Otherwise serve the requested file by calling get_file()
+            get_d20(fd);
         }
     } else {
-        resp_404()
+        resp_404(fd);
     }
 
     // (Stretch) If POST, handle the post request
