@@ -9,9 +9,16 @@
  */
 struct cache_entry *alloc_entry(char *path, char *content_type, void *content, int content_length)
 {
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    struct cache_entry *entry = malloc(sizeof(struct cache_entry));
+
+    // returns a pointer to the duplicate string
+    entry->path = strdup(path);
+
+    entry->content_type = strdup(content_type);
+
+    entry->content = content;
+
+    entry->content_length = content_length;
 }
 
 /**
@@ -19,9 +26,11 @@ struct cache_entry *alloc_entry(char *path, char *content_type, void *content, i
  */
 void free_entry(struct cache_entry *entry)
 {
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    // free() deallocates the memory previously allocated
+    free(entry->path);
+    free(entry->content_type);
+    free(entry->content);
+    free(entry);
 }
 
 /**
@@ -122,9 +131,35 @@ void cache_free(struct cache *cache)
  */
 void cache_put(struct cache *cache, char *path, char *content_type, void *content, int content_length)
 {
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    // Allocate a new cache entry with the passed parameters
+    struct cache_entry *new_entry = alloc_entry(path, content_type, content, content_length);
+
+    // Insert the entry at the head of the doubly-linked list
+    dllist_insert_head(cache, new_entry);
+
+    // Store the entry in the hashtable, indexed by the entry's path
+    hashtable_put(cache->index, path, new_entry);
+
+    // Increment the current size of the cache
+    cache->cur_size++;
+
+    // If the cahce size is greater than the max size:
+    if (cache->cur_size > cache->max_size) {
+        // Remove the cache entry at the tail of the linked list
+        struct cache_entry *previous_tail = dllist_remove_tail(cache);
+
+        // Remove that same entry from the hashtable, using the entry's path and the hashtable_delete function
+        hashtable_delete(cache->index, previous_tail->path);
+
+        // Free the cache entry
+        free_entry(previous_tail);
+
+        // Ensure the size counter for the number of entries in the cache is correct
+        if (cache->cur_size > cache->max_size) {
+            cache->cur_size--;
+        }
+    }
+        
 }
 
 /**
