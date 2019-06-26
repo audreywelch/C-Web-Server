@@ -53,17 +53,6 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     const int max_response_size = 262144;
     char response[max_response_size];
 
-    // Build HTTP response and store it in response
-    /*
-        HTTP/1.1 200 OK
-        Date: Wed Dec 20 13:05:11 PST 2017
-        Connection: close
-        Content-Length: 41749
-        Content-Type: text/html
-
-        <!DOCTYPE html><html><head><title>Lambda School ...
-    */
-
     // Store it in response, and pass in the following
     int response_length = sprintf(response,
         "%s\n"
@@ -73,13 +62,6 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
         "Connection: close\n"
         "\n",
         header, content_type, content_length);
-        //"%s", // passing binary data is not working b/c it is full of 0s. And zeros are what indicate we are at the end of a string, so it's stopping before it reads the whole piece of data: a PNG in this case
-
-    // Length of response, including the HTTP header
-    //int response_length = strlen(response); >> set this above
-
-    // memcpy(); // memcpy the data onto the end, rather than passing "%s"
-    // Or send the header over and THEN send the body over
 
     // Send it all! // take our HTTP data that we built and telling OS to send it out over the connection
 
@@ -159,12 +141,32 @@ void resp_404(int fd)
 // tells us that it is actually a PNG image data, 
 void get_file(int fd, struct cache *cache, char *request_path)
 {
-    (void)fd;
     (void)cache;
-    (void)request_path;
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+
+    char filepath[4096];
+    struct file_data *filedata; 
+    char *mime_type;
+
+    //if (request_path not in cache) {
+        // then here is where we will get the file
+        // Fetch the file
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+        filedata = file_load(filepath);
+
+        if (filedata == NULL) {
+            resp_404(fd);
+            return;
+        }
+        // put_file_in_cahce();
+    //}
+
+    // get_file_from_cache();
+
+    mime_type = mime_type_get(filepath);
+
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
+    file_free(filedata);
 }
 
 /**
@@ -204,10 +206,6 @@ void handle_http_request(int fd, struct cache *cache)
     printf("%s\n", request);
     printf("---------------\n");
 
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
     // Read the first two components of the first line of the request
     sscanf(request, "%s %s", method, path);
 
@@ -219,7 +217,8 @@ void handle_http_request(int fd, struct cache *cache)
             get_d20(fd);
         } else {
             // Otherwise serve the requested file by calling get_file()
-            get_d20(fd);
+            void get_files(fd, cahce, path);
+            
         }
     } else {
         resp_404(fd);
