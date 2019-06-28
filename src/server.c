@@ -95,7 +95,7 @@ void get_d20(int fd)
     // int i;
     // for (i = 0; i <= 1; i++)
     // {
-    //     num = rand() % 21 + 1;
+    //     num = rand() % 20 + 1;
     //     printf("%d\n", num);
     // }
 
@@ -141,13 +141,14 @@ void resp_404(int fd)
 // tells us that it is actually a PNG image data, 
 void get_file(int fd, struct cache *cache, char *request_path)
 {
-    (void)cache;
-
     char filepath[4096];
     struct file_data *filedata; 
     char *mime_type;
 
-    //if (request_path not in cache) {
+    struct cache_entry *ce = cache_get(cache, request_path);
+
+    // request_path not in cache
+    if (ce == NULL) {
         // then here is where we will get the file
         // Fetch the file
         snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
@@ -158,15 +159,27 @@ void get_file(int fd, struct cache *cache, char *request_path)
             return;
         }
         // put_file_in_cahce();
-    //}
 
-    // get_file_from_cache();
+        mime_type = mime_type_get(filepath);
 
-    mime_type = mime_type_get(filepath);
+        printf("CACHE MISS: %s\n", request_path);
 
-    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+        // Store in cache
+        cache_put(cache, request_path, mime_type, filedata->data, filedata->size);
 
-    file_free(filedata);
+        send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
+        
+
+        file_free(filedata);
+    
+    } else {
+        printf("CACHE HIT: %s\n", request_path);
+        // if it was in the cache, just send it
+        send_response(fd, "HTTP/1.1 200 OK", ce->content_type, ce->content, ce->content_length);
+
+    }
+    
 }
 
 /**
@@ -208,16 +221,16 @@ void handle_http_request(int fd, struct cache *cache)
 
     // Read the first two components of the first line of the request
     sscanf(request, "%s %s", method, path);
+    printf("%s\n%s\n", method, path);
 
     // If GET, handle the get endpoints
     if (strcmp(method, "GET") == 0) {
-        //    Check if it's /d20 and handle that special case
+        // Check if it's /d20 and handle that special case
         if (strcmp(path, "/d20" == 0)) {
-            // Do something here ??
             get_d20(fd);
         } else {
             // Otherwise serve the requested file by calling get_file()
-            void get_files(fd, cahce, path);
+            get_file(fd, cache, path);
             
         }
     } else {
